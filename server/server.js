@@ -6,6 +6,7 @@ const socketIO = require('socket.io');
 const {generateMessage, generateLocationMessage} = require('./utils/message');
 const {isRealString} = require('./utils/validation');
 const {Users} = require('./utils/users');
+const {Rooms} = require('./utils/rooms');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -15,21 +16,35 @@ const publicPath = path.join(__dirname + '/../public');
 let server = http.createServer(app);
 let io = socketIO(server);
 let users = new Users();
+let rooms = new Rooms();
 
 //express middleware
 app.use(express.static(publicPath));
 
 io.on('connection', (socket) => {
-    console.log('New user connected');
+
+    socket.on('updateRoomsRequest', (message, callback) => {
+        let roomsList = rooms.roomsList;
+
+        callback(roomsList);
+    });
 
     socket.on('join', (params, callback) => {
         if(!isRealString(params.name) || !isRealString(params.room)) {
             return callback('name and room name are required');
         }
 
+        if(!rooms.checkRoomExists(params.room)) {
+            rooms.createRoom(params.room);
+        }
+
         socket.join(params.room);
         // socket.leave();
         users.removeUser(socket.id);
+
+        if(users.checkUserExists(params.name, params.room)) {
+            return callback('A user with the same name exists in the same room. Please use a different name.');
+        }
         users.addUser(socket.id, params.name, params.room);
 
         io.to(params.room).emit('updateUserList', users.getUserList(params.room));
@@ -65,8 +80,13 @@ io.on('connection', (socket) => {
 
         if(user) {
             io.to(user.room).emit('updateUserList', users.getUserList(user.room));
-            io.to(user.room).emit('newMessage', generateMessage('Admin', `${user.name} has left the room.`))
+            io.to(user.room).emit('newMessage', generateMessage('Admin', `${user.name} has left the room.`));
+
+            if(users.getUserList(user.room).length === 0) {
+                rooms.deleteRoom(user.room);
+            }
         }
+
     });
 });
 

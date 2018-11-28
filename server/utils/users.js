@@ -31,6 +31,11 @@ class Users {
 
         return namesArray;
     }
+
+    checkUserExists(name, room) {
+        let usersList = this.getUserList(room);
+        return usersList.includes(name);
+    }
 }
 
 module.exports = {Users};

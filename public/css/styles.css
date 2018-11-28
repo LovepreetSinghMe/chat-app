@@ -58,11 +58,15 @@
     border-radius: 5px;
     padding: 0px 20px;
     margin: 20px;
-    width: 230px;
+    width: 400px;
   }
   
   .form-field {
     margin: 20px 0;
+  }
+
+  div#rooms select {
+    width: 100%;
   }
   
   .form-field > * {
